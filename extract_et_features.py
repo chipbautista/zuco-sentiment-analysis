@@ -42,7 +42,7 @@ WORD_KEYS = [
     'SFD_t2_diff', 'SFD_a1_diff', 'SFD_a2_diff', 'SFD_b1_diff', 'SFD_b2_diff',
     'SFD_g1_diff', 'SFD_g2_diff']
 
-word_features = ['fixPositions', 'nFixations', 'meanPupilSize', 'FFD', 'FFD_pupilsize',
+WORD_FEATURES = ['fixPositions', 'nFixations', 'meanPupilSize', 'FFD', 'FFD_pupilsize',
                  'TRT', 'TRT_pupilsize', 'GD', 'GD_pupilsize', 'GPT',
                  'GPT_pupilsize', 'SFD', 'SFD_pupilsize']
 word_features_indices = [0, 1, 3, 6, 7, 24, 25, 42, 43, 60, 61, 78, 79]
@@ -50,18 +50,25 @@ sentences = []
 
 TASK_NUM = 1  # SENTIMENT
 task_abbrev = '_SR'
+max_sentence_length = 0
 for subj in SUBJECTS:
+    print('Extracting from subject', subj)
     mat_file = scio.loadmat(MAT_DIR.format(TASK_NUM, subj + task_abbrev))
     for s_num, sentence_data in enumerate(mat_file['sentenceData'][0]):
 
         # initialize structure
         words = [w[0] for w in sentence_data['word']['content'][0]]
+
         if (s_num + 1) > len(sentences):
             sentences.append([])
-            sentences[s_num] = [{k: [] for k in word_features}
+            sentences[s_num] = [{k: [] for k in WORD_FEATURES}
                                 for w in words]
 
-        for feature in word_features:
+        sentence_length = len(words)
+        if sentence_length > max_sentence_length:
+            max_sentence_length = sentence_length
+
+        for feature in WORD_FEATURES:
             try:
                 values = sentence_data['word'][feature][0]
             except ValueError as e:
@@ -74,11 +81,13 @@ for subj in SUBJECTS:
 
             for w, v in enumerate(values):
                 if not v.all() or v.shape[1] == 0:
-                    v = None
+                    v = np.NaN
                 elif feature == 'fixPositions' and v.shape[1] > 0:
                     v = list(v[0])
                 else:
                     v = float(v[0])
                 sentences[s_num][w][feature].append(v)
 
-np.save('task1_sentence_features', sentences)
+np.save(ET_FEATURES, sentences, allow_pickle=True)
+print('Done. Saved to:', ET_FEATURES)
+print('Max words in sentence:', max_sentence_length)
