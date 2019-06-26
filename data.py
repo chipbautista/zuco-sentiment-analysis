@@ -1,11 +1,13 @@
-import re
 
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 from sklearn.datasets import load_files
 from sklearn.preprocessing import StandardScaler
+from tflearn.data_utils import VocabularyProcessor
 
 from settings import *
+from utils import clean_str
 
 
 class SentimentDataSet(Dataset):
@@ -14,51 +16,51 @@ class SentimentDataSet(Dataset):
         if mode == 'ternary':
             categories.append('NEUTRAL')
 
+        self.num_classes = len(categories)
+
         dataset = load_files(
             container_path=DATASET_DIR, categories=categories,
             load_content=True, encoding='utf-8')
-        self.sentences, _, _, self.targets, _ = dataset
-        self.sentences = [self.clean_str(s) for s in self.sentences]
-        self.et_features = EyeTrackingFeatures()
+        self.sentences, _, _, self.targets, _ = dataset.values()
+        self.sentences = [clean_str(s) for s in self.sentences]
+
+        self.max_sentence_length = max([len(s.split())
+                                        for s in self.sentences])
+
+        # adopting Hollenstein's method
+        self.vocab_processor = VocabularyProcessor(self.max_sentence_length)
+        self.indexed_sentences = torch.LongTensor(list(
+            self.vocab_processor.fit_transform(self.sentences)))
+        self.vocabulary = list(
+            self.vocab_processor.vocabulary_._mapping.keys())
+
+        print('> Data set loaded. Sentiment classes:', categories)
+        print('> Max sentence length:', self.max_sentence_length, 'words.')
+
+        self.et_features = EyeTrackingFeatures(self.max_sentence_length)
+        print('> Loaded eye-tracking features.')
 
     def __len__(self):
         return len(self.sentences)
 
     def __getitem__(self, idx):
-        return (self.sentences[idx], self.targets[idx], self.et_features[idx])
-
-    def clean_str(self, string):
-        # copy pasted from Hollenstein's code...
-        # TO-DO: Convert this to regex
-        string = string.replace(".", "")
-        string = string.replace(",", "")
-        string = string.replace("--", "")
-        string = string.replace("`", "")
-        string = string.replace("''", "")
-        string = string.replace("' ", " ")
-        string = string.replace("*", "")
-        string = string.replace("\\", "")
-        string = string.replace(";", "")
-        string = string.replace("- ", " ")
-        string = string.replace("/", "-")
-        string = string.replace("!", "")
-        string = string.replace("?", "")
-        string = re.sub(r"\s{2,}", " ", string)
-
-        return string.strip().lower()
+        return (self.indexed_sentences[idx],
+                self.et_features[idx],
+                self.targets[idx])
 
 
-class EyeTrackingFeatures(object):
-    def __init__(self):
+class EyeTrackingFeatures():
+    def __init__(self, max_sentence_length):
+        self.max_sentence_length = max_sentence_length
         # store sentences here. each sentence has length N = number of words.
-        self.sentences = []
+        self.sentences_et = []
         # to normalize each of the selected ET features. "across corpus"
         self.normalizer = StandardScaler()
 
         self.import_et_features()
 
     def import_et_features(self):
-        sentence_et_features = np.load(ET_FEATURES, allow_pickle=True)
+        sentence_et_features = np.load(ET_FEATURES_DIR, allow_pickle=True)
 
         for si, sentence in enumerate(sentence_et_features):  # 400 of these
             sentence_et = []
@@ -77,8 +79,17 @@ class EyeTrackingFeatures(object):
                 else:  # when a word does not have any recorded ET feature
                     sentence_et.append(np.array([np.nan] * 5))
 
-            self.sentences.append(np.array(sentence_et))
-        self.sentences = [self.normalizer.transform(s) for s in self.sentences]
+            self.sentences_et.append(np.array(sentence_et))
+
+        # We keep the NaN values at first so that it doesn't mess up
+        # the normalization process.
+        # Let's only convert them to 0s after normalizing.
+        self.sentences_et = [np.nan_to_num(self.normalizer.transform(s))
+                             for s in self.sentences_et]
 
     def __getitem__(self, index):
-        return self.sentences[index]
+        et_features = torch.Tensor(self.sentences_et[index])
+        missing_dims = self.max_sentence_length - et_features.shape[0]
+        return torch.nn.functional.pad(et_features,
+                                       (0, 0, 0, missing_dims),
+                                       mode='constant')
