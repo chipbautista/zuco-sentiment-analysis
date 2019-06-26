@@ -7,13 +7,15 @@ from settings import *
 
 
 class BaseModel(torch.nn.Module):
-    def __init__(self, lstm_units, max_sentence_length, vocabulary, num_classes):
+    def __init__(self, lstm_units, max_sentence_length,
+                 num_classes, initial_word_embedding):
         super(BaseModel, self).__init__()
         self.lstm_units = lstm_units
         self.max_sentence_length = max_sentence_length
 
         self.word_embedding = torch.nn.Embedding.from_pretrained(
-            self.init_embed_from_word2vec(vocabulary))
+            initial_word_embedding)
+
         self.bi_lstm = torch.nn.LSTM(input_size=WORD_EMBED_DIM + ET_FEATURE_DIM,
                                      hidden_size=self.lstm_units,
                                      bidirectional=True,
@@ -45,25 +47,24 @@ class BaseModel(torch.nn.Module):
         logits = self.out(hidden_l1_out)
         return logits
 
-    def init_embed_from_word2vec(self, vocabulary):
-        print('> Loading pre-trained word2vec from', WORD_EMBED_MODEL_DIR)
-        pretrained_w2v = KeyedVectors.load_word2vec_format(
-            WORD_EMBED_MODEL_DIR, binary=True)
-        print('> Done. Will now extract embeddings for needed words.')
 
-        embeddings = []
-        oov_words = []
-        for word in vocabulary:
-            try:
-                embeddings.append(pretrained_w2v[word])
-            except KeyError:
-                embeddings.append(
-                    np.random.uniform(-0.25, 0.25, WORD_EMBED_DIM))
-                oov_words.append(word)
+def init_word_embedding_from_word2vec(vocabulary):
+    print('> Loading pre-trained word2vec from', WORD_EMBED_MODEL_DIR)
+    pretrained_w2v = KeyedVectors.load_word2vec_format(
+        WORD_EMBED_MODEL_DIR, binary=True)
+    print('> Done. Will now extract embeddings for needed words.')
 
-        print('>', len(oov_words), 'words were not found in the pre-trained model.')
-        return torch.Tensor(embeddings)
+    embeddings = []
+    oov_words = []
+    for word in vocabulary:
+        try:
+            embeddings.append(pretrained_w2v[word])
+        except KeyError:
+            embeddings.append(np.random.uniform(-1.0, 1.0, WORD_EMBED_DIM))
+            oov_words.append(word)
 
+    print('>', len(oov_words), 'words were not found in the pre-trained model.')
+    return torch.Tensor(embeddings)
 
 # class Model_B(object):
 # 	pass

@@ -1,10 +1,11 @@
 import sys
 
-from torch.utils.data import DataLoader
+from torch import softmax
 from torch.optim import SGD
 from torch.nn import CrossEntropyLoss
+from sklearn.metrics import accuracy_score
 
-from model import BaseModel
+from model import BaseModel, init_word_embedding_from_word2vec
 from data import SentimentDataSet
 from settings import *
 
@@ -14,6 +15,27 @@ For arg parse
 word_embedding_weights
 if None: initialize from GoogleNews
 """
+
+
+def iterate(dataloader, mode):
+    epoch_loss = 0.0
+    all_targets = []
+    all_predictions = []
+    for i, (indices, et_features, targets) in enumerate(train_loader):
+        logits = model(indices, et_features)
+        # TO-DO: Add L2 and L1 loss!! Check out Hollenstein's code.
+        loss = XE_loss(logits, targets)
+        if mode == 'train':
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        all_targets.extend(targets)
+        all_predictions.extend(softmax(logits, dim=1).argmax(dim=1))
+        epoch_loss += loss.item()
+    return epoch_loss, accuracy_score(all_targets, all_predictions)
+
+
 if len(sys.argv) == 1 or sys.argv[1] == 'b':
     # binary classification
     LSTM_UNITS = 300
@@ -25,21 +47,34 @@ else:
     HALVE_LR_EVERY_PASSES = 9
     dataset = SentimentDataSet('ternary')
 
-data_loader = DataLoader(dataset, batch_size=BATCH_SIZE,
-                         shuffle=True, drop_last=True)
-model = BaseModel(LSTM_UNITS, dataset.max_sentence_length,
-                  dataset.vocabulary, dataset.num_classes)
-optimizer = SGD(model.parameters(), lr=INITIAL_LR)
+initial_word_embedding = init_word_embedding_from_word2vec(dataset.vocabulary)
 XE_loss = CrossEntropyLoss()
 
-for e in range(NUM_EPOCHS):
-    epoch_loss = 0.0
-    for i, (indices, et_features, targets) in enumerate(data_loader):
-        optimizer.zero_grad()
-        logits = model(indices, et_features)
-        loss = XE_loss(logits, targets)
-        loss.backward()
-        optimizer.step()
+print('\n> Starting 10-fold CV.')
+for k in range(10):
+    train_loader, test_loader = dataset.get_train_test_split()
+    model = BaseModel(LSTM_UNITS, dataset.max_sentence_length,
+                      dataset.num_classes, initial_word_embedding)
+    optimizer = SGD(model.parameters(), lr=INITIAL_LR)
+    accuracies = []
+    for e in range(150):
+        train_loss, train_accuracy = iterate(train_loader, 'train')
+        # train_loss = 0.0
+        # test_
+        # all_targets = []
+        # all_predictions = []
+        # for i, (indices, et_features, targets) in enumerate(train_loader):
+        #     optimizer.zero_grad()
+        #     logits = model(indices, et_features)
+        #     loss = XE_loss(logits, targets)
+        #     loss.backward()
+        #     optimizer.step()
 
-        epoch_loss += loss.item()
-    print('Epoch', e, 'loss:', epoch_loss)
+        #     all_targets.extend(targets)
+        #     all_predictions.extend(softmax(logits, dim=1).argmax(dim=1))
+        #     train_loss += loss.item()
+    test_loss, test_accuracy = iterate(test_loader, 'test')
+    accuracies.append(test_accuracy)
+    print('Fold', k, 'Train Loss:', train_loss,
+          'Train Acc:', train_accuracy, 'Test Loss:', test_loss,
+          'Test Acc:', test_accuracy)

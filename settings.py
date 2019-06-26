@@ -7,13 +7,12 @@ ET_FEATURES_TO_USE = ['nFixations', 'FFD', 'TRT', 'GD', 'GPT']
 # Model configuration, following Hollenstein
 NUM_EPOCHS = 10
 BATCH_SIZE = 32
-INITIAL_LR = 1e-3
+INITIAL_LR = 0.1
 DROPOUT_PROB = 0.5
 
 HIDDEN_LAYER_UNITS = 50
 WORD_EMBED_DIM = 300
 ET_FEATURE_DIM = len(ET_FEATURES_TO_USE)
-MAX_SENTENCE_LENGTH = 43
 
 # Directories
 DATASET_DIR = 'data/sentences/'

@@ -1,7 +1,7 @@
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from sklearn.datasets import load_files
 from sklearn.preprocessing import StandardScaler
 from tflearn.data_utils import VocabularyProcessor
@@ -24,6 +24,7 @@ class SentimentDataSet(Dataset):
         self.sentences, _, _, self.targets, _ = dataset.values()
         self.sentences = [clean_str(s) for s in self.sentences]
 
+        self.num_sentences = len(self.sentences)
         self.max_sentence_length = max([len(s.split())
                                         for s in self.sentences])
 
@@ -40,8 +41,34 @@ class SentimentDataSet(Dataset):
         self.et_features = EyeTrackingFeatures(self.max_sentence_length)
         print('> Loaded eye-tracking features.')
 
+    def get_train_test_split(self):
+        # this isn't real CV though, because i'm just randomizing.
+        # fix this later.
+        split = int(np.ceil(self.num_sentences * .9))
+        indices = np.array(list(range(len(self.sentences))))
+        np.random.shuffle(indices)
+        train_indices = indices[:split]
+        test_indices = indices[split:]
+        return (self.get_dataloader(train_indices),
+                self.get_dataloader(test_indices))
+
+    def get_dataloader(self, indices):
+        et_features = [self.et_features[i] for i in indices]
+        dataset = SplitDataset(self.indexed_sentences[indices],
+                               et_features,
+                               self.targets[indices])
+        return DataLoader(dataset, batch_size=BATCH_SIZE,
+                          shuffle=True, drop_last=True)
+
+
+class SplitDataset(Dataset):
+    def __init__(self, indexed_sentences, et_features, targets):
+        self.indexed_sentences = indexed_sentences
+        self.et_features = et_features
+        self.targets = targets
+
     def __len__(self):
-        return len(self.sentences)
+        return len(self.indexed_sentences)
 
     def __getitem__(self, idx):
         return (self.indexed_sentences[idx],
