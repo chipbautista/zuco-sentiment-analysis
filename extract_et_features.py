@@ -2,7 +2,6 @@ import scipy.io as scio
 import numpy as np
 
 from settings import *
-from utils import clean_str
 
 
 WORD_FEATURES = ['fixPositions', 'nFixations', 'meanPupilSize', 'FFD',
@@ -20,8 +19,7 @@ for subj in SUBJECTS:
     for s_num, sentence_data in enumerate(mat_file['sentenceData'][0]):
 
         # initialize structure
-        words = [clean_str(w[0]) for w in sentence_data['word']['content'][0]]
-        # vocabulary = vocabulary.union(words)
+        words = [w[0] for w in sentence_data['word']['content'][0]]
 
         if (s_num + 1) > len(sentences):
             sentences.append([])
@@ -53,8 +51,5 @@ for subj in SUBJECTS:
                 sentences[s_num][w][feature].append(v)
 
 np.save(ET_FEATURES_DIR, sentences, allow_pickle=True)
-# np.save(VOCAB_DIR, list(vocabulary), allow_pickle=True)
 print('\n> Done. Eye-tracking features saved to:', ET_FEATURES_DIR)
 print('> Max words in sentence:', max_sentence_length)
-# print('> Number of words in vocabulary:', len(vocabulary))
-# print('> Vocabulary saved to:', VOCAB_DIR)

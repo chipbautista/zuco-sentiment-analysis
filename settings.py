@@ -1,13 +1,15 @@
+from torch import cuda
+USE_CUDA = cuda.is_available()
+
 # General info
 SUBJECTS = ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH',
             'ZKW', 'ZMG', 'ZPH']  # exclude ZDN for now
 
 ET_FEATURES_TO_USE = ['nFixations', 'FFD', 'TRT', 'GD', 'GPT']
 
-# Model configuration, following Hollenstein
-NUM_EPOCHS = 10
+NUM_EPOCHS = 75
 BATCH_SIZE = 32
-INITIAL_LR = 0.1
+INITIAL_LR = 0.01
 DROPOUT_PROB = 0.5
 
 HIDDEN_LAYER_UNITS = 50
@@ -19,7 +21,6 @@ DATASET_DIR = 'data/sentences/'
 WORD_EMBED_MODEL_DIR = 'models/GoogleNews-vectors-negative300.bin'
 INITIAL_WORD_EMBED_DIR = 'models/initial_word_embeddings.npy'
 ET_FEATURES_DIR = 'data/task1_sentence_features.npy'
-VOCAB_DIR = 'data/vocabulary.npy'
 MAT_DIR = '../ZuCo/task{}/Matlab files/results{}.mat'
 
 """
