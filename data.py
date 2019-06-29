@@ -58,16 +58,22 @@ class SentimentDataSet():
                    self._get_dataloader(test_indices))
 
     def _get_dataloader(self, indices):
-        # need to do this in order to match the sentences imported by
-        # load_files with the ones
-        # given in the Matlab files (where we get et_features from)...
-        # ONLY WORKS WHEN USING THE WHOLE DATA SET! (num_classes=3)
-        indices_ = np.array([self.sentence_numbers.index(i) for i in indices])
         et_features = [self.et_features[i] for i in indices]
 
-        # _sent_lengths = [len(self.sentences[i].split()) for i in indices_]
-        # _et_lengths = [self.et_features.sentences_et[i].shape[0] for i in indices]
-        # print('SENTENCES MATCH:', np.all(np.array(np.array(_et_lengths) == np.array(_sent_lengths))))
+        # do this in order to match the sentences imported by load_files with
+        # the ones given in the Matlab files (where we get et_features from)...
+        # ONLY WORKS WHEN USING THE WHOLE DATA SET! (num_classes=3)
+        indices_ = np.array([self.sentence_numbers.index(i) for i in indices])
+
+        _sent_len = [len(self.sentences[i].split()) for i in indices_]
+        _et_len = [self.et_features.sentences_et[i].shape[0] for i in indices]
+        _matches = np.array(np.array(_et_len) == np.array(_sent_len))
+        if not np.all(_matches):
+            _sent_numbers = indices_[np.where(_matches != True)]
+            print('Some sentences do not match with number of ET features!')
+            print('Please check sentences', _sent_numbers)
+            return []
+
         dataset = SplitDataset(self.indexed_sentences[indices_],
                                self.targets[indices_],
                                et_features)
@@ -104,7 +110,7 @@ class EyeTrackingFeatures():
 
         for si, sentence in enumerate(sentence_et_features):  # 400 of these
             sentence_et = []
-            for wi, word in enumerate(sentence):
+            for word in sentence:
                 features = np.array([word['nFixations'],
                                      word['FFD'],
                                      word['TRT'],
@@ -121,6 +127,7 @@ class EyeTrackingFeatures():
 
             self.sentences_et.append(np.array(sentence_et))
 
+        # import pdb; pdb.set_trace()
         # We keep the NaN values at first so that it doesn't mess up
         # the normalization process.
         # Let's only convert them to 0s after normalizing.
@@ -136,13 +143,16 @@ class EyeTrackingFeatures():
 
 
 def clean_str(string):
-    # mostly copy pasted from Hollenstein's code...
-    # had to change some because it messes up the matching of the words
-    # in a sentence :fearful:
+    """
+    mostly copy pasted from Hollenstein's code...
+
+    had to change some because it messes up the matching of the words
+    in a sentence :fearful:
+    (removes 'words' such as '...' that actually have ET features!)
+    """
     # string = string.replace(".", "")
     string = re.sub(r'([\w ])(\.)+', r'\1', string)
     string = string.replace(",", "")
-    # this messes up the correspondence of words between cleaned data set and obtained gaze data per word
     # string = string.replace("--", "")
     string = string.replace("`", "")
     string = string.replace("''", "")
@@ -154,10 +164,6 @@ def clean_str(string):
     string = string.replace("/", "-")
     string = string.replace("!", "")
     string = string.replace("?", "")
-
-    # added by chip
-    # string = re.sub(r"[():]", "", string)
-    # string = re.sub(r"-$", "", string)
 
     string = re.sub(r"\s{2,}", " ", string)
 

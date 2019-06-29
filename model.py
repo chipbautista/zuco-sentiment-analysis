@@ -6,6 +6,10 @@ from gensim.models import KeyedVectors
 from settings import *
 
 
+torch.manual_seed(111)
+np.random.seed(111)
+
+
 class BaseModel(torch.nn.Module):
     def __init__(self, lstm_units, max_sentence_length,
                  num_classes, initial_word_embedding, use_gaze):

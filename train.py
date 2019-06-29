@@ -101,7 +101,7 @@ for k, (train_loader, test_loader) in enumerate(dataset.split_cross_val(10)):
                       args.num_sentiments, initial_word_embedding.clone(),
                       args.use_gaze)
     optimizer = SGD(model.parameters(), lr=INITIAL_LR,
-                    momentum=0.95, nesterov=True)
+                    momentum=0.99, nesterov=True)
     # optimizer = Adam(model.parameters(), 0.001)
     optimizer_scheduler = lr_scheduler.StepLR(
         optimizer, step_size=halve_lr_every_passes, gamma=0.5)
