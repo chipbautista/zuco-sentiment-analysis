@@ -59,20 +59,21 @@ class SentimentDataSet():
 
     def _get_dataloader(self, indices):
         et_features = [self.et_features[i] for i in indices]
-
         # do this in order to match the sentences imported by load_files with
         # the ones given in the Matlab files (where we get et_features from)...
         # ONLY WORKS WHEN USING THE WHOLE DATA SET! (num_classes=3)
         indices_ = np.array([self.sentence_numbers.index(i) for i in indices])
 
-        _sent_len = [len(self.sentences[i].split()) for i in indices_]
-        _et_len = [self.et_features.sentences_et[i].shape[0] for i in indices]
-        _matches = np.array(np.array(_et_len) == np.array(_sent_len))
-        if not np.all(_matches):
-            _sent_numbers = indices_[np.where(_matches != True)]
-            print('Some sentences do not match with number of ET features!')
-            print('Please check sentences', _sent_numbers)
-            return []
+        if self.use_gaze:
+            _sent_len = [len(self.sentences[i].split()) for i in indices_]
+            _et_len = [self.et_features.sentences_et[i].shape[0]
+                       for i in indices]
+            _matches = np.array(np.array(_et_len) == np.array(_sent_len))
+            if not np.all(_matches):
+                _sent_numbers = indices_[np.where(_matches != True)]
+                print('Some sentences do not match with number of ET features!')
+                print('Please check sentences', _sent_numbers)
+                return []
 
         dataset = SplitDataset(self.indexed_sentences[indices_],
                                self.targets[indices_],

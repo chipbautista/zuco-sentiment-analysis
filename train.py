@@ -72,6 +72,7 @@ parser.add_argument('--num-sentiments', type=int, default=3,
                     help='2: binary classification (broken!), 3: ternary.')
 parser.add_argument('--use-gaze', default=True)
 args = parser.parse_args()
+args.use_gaze = args.use_gaze is True
 
 dataset = SentimentDataSet(args)
 lstm_units, halve_lr_every_passes = ((300, 3) if args.num_sentiments == 2
