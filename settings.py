@@ -3,14 +3,19 @@ USE_CUDA = cuda.is_available()
 
 # General info
 SUBJECTS = ['ZAB', 'ZDM', 'ZGW', 'ZJM', 'ZJN', 'ZJS', 'ZKB', 'ZKH',
-            'ZKW', 'ZMG', 'ZPH']  # exclude ZDN for now
+            'ZKW', 'ZMG', 'ZPH', 'ZDN']
 
 ET_FEATURES_TO_USE = ['nFixations', 'FFD', 'TRT', 'GD', 'GPT']
 
-NUM_EPOCHS = 45
+NUM_EPOCHS = 85
 BATCH_SIZE = 32
-INITIAL_LR = 5e-3
+INITIAL_LR = 0.01
 DROPOUT_PROB = 0.5
+
+"""
+To reach 0.61 F1 score on 3 sentiments:
+use 0.01 non-decayed LR and 85 epochs.
+"""
 
 HIDDEN_LAYER_UNITS = 50
 WORD_EMBED_DIM = 300

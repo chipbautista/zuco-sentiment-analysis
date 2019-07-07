@@ -127,7 +127,6 @@ class EyeTrackingFeatures():
 
             self.sentences_et.append(np.array(sentence_et))
 
-        # import pdb; pdb.set_trace()
         # We keep the NaN values at first so that it doesn't mess up
         # the normalization process.
         # Let's only convert them to 0s after normalizing.

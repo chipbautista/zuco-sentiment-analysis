@@ -19,7 +19,11 @@ for subj in SUBJECTS:
     for s_num, sentence_data in enumerate(mat_file['sentenceData'][0]):
 
         # initialize structure
-        words = [w[0] for w in sentence_data['word']['content'][0]]
+        try:
+            words = [w[0] for w in sentence_data['word']['content'][0]]
+        except Exception as e:
+            print('Sentence #', s_num, 'for subject', subj, 'not available.')
+            continue
 
         if (s_num + 1) > len(sentences):
             sentences.append([])
